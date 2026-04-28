@@ -30,13 +30,16 @@ export async function downloadToDownloadsFolder({
 
   const info = resDownload.info();
   if (Number(info?.status || 0) !== 200) {
-    throw new Error(`下載失敗（${info?.status || '未知狀態'}）`);
+    if (Number(info?.status || 0) === 401) {
+      throw new Error('下載失敗：API 金鑰不正確。');
+    }
+    throw new Error('下載失敗，請稍後再試。');
   }
 
   const downloadedPath = resDownload.path();
   const st = await RNBlobUtil.fs.stat(downloadedPath);
   const size = Number(st?.size || 0);
-  if (!size) throw new Error('下載的檔案是空的（0 位元組）。');
+  if (!size) throw new Error('下載失敗：檔案是空的。請重新轉換後再試。');
 
   await RNBlobUtil.MediaCollection.copyToMediaStore(
     { name: safeFilename, parentFolder: '', mimeType: 'audio/mpeg' },
@@ -47,4 +50,3 @@ export async function downloadToDownloadsFolder({
   await RNBlobUtil.fs.unlink(downloadedPath).catch(() => {});
   return { safeFilename };
 }
-

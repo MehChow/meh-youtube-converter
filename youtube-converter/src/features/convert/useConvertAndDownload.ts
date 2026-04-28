@@ -1,104 +1,68 @@
 import { useMemo, useState } from 'react';
 
-import { convertYouTubeUrl, previewYouTubeUrl } from '@/src/lib/api';
-import { downloadToDownloadsFolder, openAndroidDownloads } from '@/src/lib/downloads';
+import { openAndroidDownloads } from '@/src/lib/downloads';
+import { parseYouTubeUrl } from '@/src/lib/validation/youtubeUrl';
+import { queryClient } from '@/src/lib/queryClient';
+import { useConvertAndDownloadMutation, usePreviewQuery } from './convert.queries';
 
-type Status = 'idle' | 'converting' | 'done' | 'error';
 type PreviewStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-type PreviewData = {
-  title: string;
-  uploader: string;
-  durationSeconds: number | null;
-  webpageUrl: string;
-  thumbnailUrl: string;
-};
 
 export function useConvertAndDownload() {
   const [url, setUrl] = useState('');
-  const [status, setStatus] = useState<Status>('idle');
-  const [message, setMessage] = useState('');
   const [lastFilename, setLastFilename] = useState('');
-  const [previewStatus, setPreviewStatus] = useState<PreviewStatus>('idle');
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
 
-  const canConvert = useMemo(() => {
-    const trimmed = url.trim();
-    if (trimmed.length < 10) return false;
-    // Allow common YouTube URL formats; the backend/API will do final validation.
-    return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(trimmed);
-  }, [url]);
+  const parsedUrl = useMemo(() => parseYouTubeUrl(url), [url]);
+  const canConvert = parsedUrl.ok;
 
-  const isConverting = useMemo(() => status === 'converting', [status]);
+  const previewQuery = usePreviewQuery(url);
+  const convertMutation = useConvertAndDownloadMutation();
+
+  const isConverting = convertMutation.isPending;
+  const previewStatus: PreviewStatus = previewQuery.isFetching
+    ? 'loading'
+    : previewQuery.data
+      ? 'ready'
+      : previewQuery.error
+        ? 'error'
+        : 'idle';
+
+  const previewData = previewQuery.data ?? null;
+
+  const message =
+    (previewQuery.error instanceof Error ? previewQuery.error.message : '') ||
+    (convertMutation.error instanceof Error ? convertMutation.error.message : '');
 
   const clearPreview = () => {
-    setPreviewStatus('idle');
-    setPreviewUrl('');
-    setPreviewData(null);
+    queryClient.removeQueries({ queryKey: ['preview'], exact: false });
   };
 
-  const setUrlAndMaybeClearPreview = (next: string) => {
-    setUrl(next);
-    if (previewStatus === 'ready' && previewUrl && next.trim() !== previewUrl) {
-      clearPreview();
-    }
-  };
-
-  const clearUrl = () => setUrlAndMaybeClearPreview('');
+  const clearUrl = () => setUrl('');
 
   const resetAll = () => {
     setUrl('');
-    setStatus('idle');
-    setMessage('');
     setLastFilename('');
     clearPreview();
+    convertMutation.reset();
   };
 
   const requestPreview = async () => {
-    try {
-      const trimmed = url.trim();
-      if (!trimmed) return;
-      setPreviewStatus('loading');
-      setMessage('');
-
-      const data = await previewYouTubeUrl(trimmed);
-      setPreviewData(data);
-      setPreviewUrl(trimmed);
-      setPreviewStatus('ready');
-    } catch (e) {
-      setPreviewStatus('error');
-      setPreviewData(null);
-      setPreviewUrl('');
-      setMessage(e instanceof Error ? e.message : '發生未知錯誤。');
-    }
+    if (!parsedUrl.ok) return;
+    await previewQuery.refetch();
   };
 
   const convertAndDownload = async () => {
-    try {
-      setStatus('converting');
-      setMessage('');
-      setLastFilename('');
-
-      const trimmed = url.trim();
-      const { fullUrl, filename, apiKey } = await convertYouTubeUrl(trimmed);
-      await downloadToDownloadsFolder({ url: fullUrl, filename, apiKey });
-
-      setLastFilename(filename);
-      setStatus('done');
-      setUrl('');
-    } catch (e) {
-      setStatus('error');
-      setMessage(e instanceof Error ? e.message : '發生未知錯誤。');
-    }
+    if (!parsedUrl.ok) return;
+    const res = await convertMutation.mutateAsync({ urlInput: url });
+    setLastFilename(res.filename);
+    setUrl('');
+    clearPreview();
   };
 
   return {
     url,
-    setUrl: setUrlAndMaybeClearPreview,
+    setUrl,
     clearUrl,
     resetAll,
-    status,
     message,
     lastFilename,
     previewStatus,
@@ -111,4 +75,3 @@ export function useConvertAndDownload() {
     openAndroidDownloads,
   };
 }
-

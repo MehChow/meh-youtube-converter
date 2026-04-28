@@ -15,7 +15,7 @@ export default function HomeScreen() {
     url,
     setUrl,
     resetAll,
-    status,
+    clearPreview,
     message,
     lastFilename,
     previewStatus,
@@ -27,7 +27,7 @@ export default function HomeScreen() {
     isConverting,
   } = useConvertAndDownload();
 
-  const canViewDownloads = status === 'done' && Boolean(lastFilename);
+  const canViewDownloads = Boolean(lastFilename);
   const mode = canViewDownloads ? 'downloads' : 'convert';
 
   return (
@@ -65,6 +65,7 @@ export default function HomeScreen() {
               onConvertAndDownload={convertAndDownload}
               onResetToPaste={() => {
                 setUrl('');
+                clearPreview();
               }}
             />
           </>
@@ -72,22 +73,13 @@ export default function HomeScreen() {
           <>
             <StepHeader title="完成！查看已下載的檔案" className="mt-8" />
 
-            {status === 'done' ? (
-              <Banner
-                title="下載完成"
-                message={lastFilename ? `${lastFilename}` : '已下載完成。'}
-              />
-            ) : null}
+            <Banner title="下載完成" message={lastFilename ? `${lastFilename}` : '已下載完成。'} />
 
             <DownloadsStepCard onOpenDownloads={openAndroidDownloads} onConvertAnother={resetAll} />
           </>
         )}
 
-        {message ? (
-          <InlineMessage tone={status === 'error' ? 'error' : 'neutral'}>{message}</InlineMessage>
-        ) : null}
-
-        <StatusBar style="dark" />
+        {message ? <InlineMessage tone="error">{message}</InlineMessage> : null}
       </View>
     </SafeAreaView>
   );
@@ -96,7 +88,7 @@ export default function HomeScreen() {
 function StepHeader({ title, className }: { title: string; className?: string }) {
   return (
     <View className={['flex-row items-baseline gap-2', className].filter(Boolean).join(' ')}>
-      <Text className="text-base font-bold text-blue-500">{title}</Text>
+      <Text className="text-lg font-bold text-blue-500">{title}</Text>
     </View>
   );
 }

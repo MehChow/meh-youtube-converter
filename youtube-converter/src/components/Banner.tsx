@@ -34,7 +34,11 @@ export function InlineMessage({
   children: React.ReactNode;
 }) {
   return (
-    <Text className={cn('mt-3 text-sm', tone === 'error' ? 'text-red-600' : 'text-neutral-700')}>
+    <Text
+      className={cn(
+        'mt-3 px-1 text-sm font-semibold',
+        tone === 'error' ? 'text-red-600' : 'text-neutral-700'
+      )}>
       {children}
     </Text>
   );

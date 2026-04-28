@@ -119,10 +119,11 @@ function Button({
     opacity.value = withTiming(props.disabled ? 0.5 : 1, { duration: pressedOpacityDuration });
   }, [opacity, props.disabled, pressedOpacityDuration]);
 
+  const styleProp = props.style;
   const mergedStyle =
-    typeof props.style === 'function'
-      ? (state: Parameters<NonNullable<typeof props.style>>[0]) => [props.style?.(state), animatedStyle]
-      : [props.style, animatedStyle];
+    typeof styleProp === 'function'
+      ? (state: Parameters<NonNullable<typeof styleProp>>[0]) => [styleProp(state), animatedStyle]
+      : [styleProp, animatedStyle];
 
   return (
     <TextClassContext.Provider value={buttonTextVariants({ variant, size })}>
