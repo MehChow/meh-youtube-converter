@@ -26,7 +26,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen
             name="tutorial"
-            options={{ title: '複製 YouTube 影片連結', headerShown: true }}
+            options={{ title: '如何複製 YouTube 影片連結', headerShown: true }}
           />
         </Stack>
         <PortalHost />

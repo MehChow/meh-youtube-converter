@@ -1,6 +1,39 @@
 import { getPublicConfig } from './env';
 import { z } from 'zod';
-import { toFriendlyApiErrorMessage, toFriendlyNetworkErrorMessage } from './errors';
+import { toFriendlyApiErrorMessage, toFriendlyNetworkErrorMessageWithContext } from './errors';
+import NetInfo from '@react-native-community/netinfo';
+
+async function fetchWithTimeout(
+  input: RequestInfo,
+  init: RequestInit & { timeoutMs?: number } = {}
+): Promise<Response> {
+  const { timeoutMs, ...rest } = init;
+  if (!timeoutMs) return fetch(input, rest);
+
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...rest, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+async function ensureOnlineOrThrow(apiBaseUrl: string, action: 'preview' | 'convert') {
+  const state = await NetInfo.fetch().catch(() => null);
+  // `isInternetReachable` can be null on first load; fall back to `isConnected`.
+  const isOffline =
+    state?.isConnected === false || state?.isInternetReachable === false;
+  if (isOffline) {
+    throw new Error(
+      toFriendlyNetworkErrorMessageWithContext({
+        action,
+        apiBaseUrl,
+        isOffline: true,
+      })
+    );
+  }
+}
 
 const ConvertResponseSchema = z.object({
   downloadUrl: z.string().min(1),
@@ -23,16 +56,26 @@ export async function convertYouTubeUrl(url: string) {
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}/convert`, {
+    await ensureOnlineOrThrow(API_BASE_URL, 'convert');
+    res = await fetchWithTimeout(`${API_BASE_URL}/convert`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'x-api-key': API_KEY,
       },
       body: JSON.stringify({ url }),
+      timeoutMs: 20_000,
     });
-  } catch {
-    throw new Error(toFriendlyNetworkErrorMessage('convert'));
+  } catch (e) {
+    const isTimeout = e instanceof Error && e.name === 'AbortError';
+    if (e instanceof Error && e.message.includes('離線狀態')) throw e;
+    throw new Error(
+      toFriendlyNetworkErrorMessageWithContext({
+        action: 'convert',
+        apiBaseUrl: API_BASE_URL,
+        isTimeout,
+      })
+    );
   }
 
   if (!res.ok) {
@@ -67,16 +110,26 @@ export async function previewYouTubeUrl(url: string) {
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}/preview`, {
+    await ensureOnlineOrThrow(API_BASE_URL, 'preview');
+    res = await fetchWithTimeout(`${API_BASE_URL}/preview`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'x-api-key': API_KEY,
       },
       body: JSON.stringify({ url }),
+      timeoutMs: 12_000,
     });
-  } catch {
-    throw new Error(toFriendlyNetworkErrorMessage('preview'));
+  } catch (e) {
+    const isTimeout = e instanceof Error && e.name === 'AbortError';
+    if (e instanceof Error && e.message.includes('離線狀態')) throw e;
+    throw new Error(
+      toFriendlyNetworkErrorMessageWithContext({
+        action: 'preview',
+        apiBaseUrl: API_BASE_URL,
+        isTimeout,
+      })
+    );
   }
 
   if (!res.ok) {

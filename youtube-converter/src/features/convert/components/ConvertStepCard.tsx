@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
-import { ActivityIndicator, Image, Keyboard, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, Pressable, TextInput, View } from 'react-native';
 
 type PreviewStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -45,13 +45,34 @@ export function ConvertStepCard({
 
           <View className="relative mt-2">
             <TextInput
-              className="rounded-xl border border-neutral-200 px-3 py-2 text-base placeholder:text-neutral-300"
-              placeholder="https://www.youtube.com/watch?v=..."
+              className="h-12 rounded-xl border border-neutral-200 px-3 py-2 pr-16 text-base placeholder:text-neutral-300"
+              placeholder=""
               autoCapitalize="none"
               autoCorrect={false}
+              multiline={false}
+              numberOfLines={1}
               value={url}
               onChangeText={setUrl}
             />
+            {!url.trim().length ? (
+              <View
+                pointerEvents="none"
+                className="absolute bottom-0 left-3 right-16 top-0 justify-center">
+                <Text className="text-base text-neutral-300" numberOfLines={1}>
+                  https://www.youtube.com/watch?v=...
+                </Text>
+              </View>
+            ) : null}
+            <Pressable
+              disabled={!url.trim().length}
+              onPress={() => setUrl('')}
+              hitSlop={10}
+              className={[
+                'absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-neutral-100 p-2 active:bg-neutral-200',
+                !url.trim().length ? 'opacity-40' : '',
+              ].join(' ')}>
+              <Text className="text-xs font-semibold text-neutral-700">清除</Text>
+            </Pressable>
           </View>
         </>
       ) : null}
@@ -94,10 +115,12 @@ export function ConvertStepCard({
       )}
 
       <View className="mt-2">
-        <Text style={{ paddingBottom: 8 }}>
-          確認無誤後再按
-          <Text style={{ color: '#8c3dd1', fontWeight: '700' }}>「下載 MP3」</Text>。
-        </Text>
+        {isReadyToDownload ? (
+          <Text style={{ paddingBottom: 8, paddingTop: 8 }}>
+            確認無誤後再按
+            <Text style={{ color: '#8c3dd1', fontWeight: '700' }}>「下載 MP3」</Text>。
+          </Text>
+        ) : null}
 
         <Button
           pressOpacity={0.8}

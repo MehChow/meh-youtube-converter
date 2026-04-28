@@ -14,7 +14,7 @@ export function DownloadsStepCard({
     <View className="mt-4">
       <View>
         <Button className="rounded-xl" onPress={onOpenDownloads}>
-          <Text className="text-white">查看檔案</Text>
+          <Text className="font-bold text-white">查看檔案</Text>
         </Button>
       </View>
 
@@ -25,7 +25,7 @@ export function DownloadsStepCard({
           pressOpacityDurationMs={140}
           className="rounded-xl bg-blue-100 active:bg-blue-100"
           onPress={onConvertAnother}>
-          <Text className="text-blue-700">再轉換一個</Text>
+          <Text className="font-bold text-blue-700">再轉換一個</Text>
         </Button>
       </View>
     </View>

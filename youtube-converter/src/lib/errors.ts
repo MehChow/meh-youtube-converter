@@ -62,3 +62,19 @@ export function toFriendlyNetworkErrorMessage(action: 'preview' | 'convert'): st
     ? '無法連線到伺服器。請確認手機與電腦在同一個 Wi‑Fi，並檢查 API 位址。'
     : '無法連線到伺服器。請確認手機與電腦在同一個 Wi‑Fi，並檢查 API 位址。';
 }
+
+export function toFriendlyNetworkErrorMessageWithContext(opts: {
+  action: 'preview' | 'convert';
+  apiBaseUrl: string;
+  isTimeout?: boolean;
+  isOffline?: boolean;
+}): string {
+  const base = opts.apiBaseUrl ? `（目前：${opts.apiBaseUrl}）` : '';
+  if (opts.isOffline) {
+    return `你目前處於離線狀態（沒有網路連線）。請開啟 Wi‑Fi/行動數據後再試。${base}`;
+  }
+  if (opts.isTimeout) {
+    return `連線逾時，請確認伺服器是否有開啟並再試一次。${base}`;
+  }
+  return `無法連線到伺服器。請確認手機與電腦在同一個 Wi‑Fi，並檢查 API 位址。${base}`;
+}
